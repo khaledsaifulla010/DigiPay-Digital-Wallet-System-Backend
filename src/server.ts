@@ -1,14 +1,18 @@
 /* eslint-disable no-console */
 import { Server } from "http";
 import app from "./app";
-
+import { envVars } from "./app/config/env";
+import mongoose from "mongoose";
 let server: Server;
+
 const startServer = async () => {
   try {
-    server = app.listen(5000, () => {
+    await mongoose.connect(envVars.DATABASE_URL as string);
+    console.log("🗄️ Connected to DataBase.");
+    server = app.listen(envVars.PORT, () => {
       try {
         console.log(
-          `🏦 DigiPay-Digital-Wallet-System is Listening to Port ${5000}.`
+          `🏦 DigiPay-Digital-Wallet-System is Listening to Port ${envVars.PORT}.`
         );
       } catch (error) {
         console.log(error);
