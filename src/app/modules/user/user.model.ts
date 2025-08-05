@@ -16,8 +16,15 @@ const userSchema = new Schema<IUser>(
       enum: ["ACTIVE", "BLOCKED"],
       default: "ACTIVE",
     },
+    wallet: {
+      type: Schema.Types.ObjectId,
+      ref: "Wallet",
+    },
   },
-  { timestamps: true, versionKey: false }
+  {
+    timestamps: true,
+    versionKey: false,
+  }
 );
 
 export const User = model<IUser>("User", userSchema);

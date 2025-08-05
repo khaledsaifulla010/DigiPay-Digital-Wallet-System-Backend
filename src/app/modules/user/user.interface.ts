@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+
 export type UserRole = "USER" | "AGENT" | "ADMIN";
 export type UserStatus = "ACTIVE" | "BLOCKED";
 
@@ -8,4 +10,5 @@ export interface IUser {
   password: string;
   role: UserRole;
   status?: UserStatus;
+  wallet?: Types.ObjectId;
 }

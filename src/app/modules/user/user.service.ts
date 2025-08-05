@@ -4,6 +4,8 @@ import { User } from "./user.model";
 import httpStatus from "http-status-codes";
 import AppError from "../../errorHelpers/appError/AppError";
 import { envVars } from "../../config/env";
+import { Wallet } from "../wallet/wallet.model";
+import { Types } from "mongoose";
 
 // Create User //
 export const createUser = async (userData: IUser) => {
@@ -11,21 +13,41 @@ export const createUser = async (userData: IUser) => {
   const isExistUser = await User.findOne({ email: userEmail });
 
   if (isExistUser) {
-    throw new AppError(httpStatus.BAD_REQUEST, "User Already Exist!","");
+    throw new AppError(httpStatus.BAD_REQUEST, "User Already Exist!", "");
   }
 
-  const hasedPassword = await bcrypt.hash(
+  const hashedPassword = await bcrypt.hash(
     userData.password,
     Number(envVars.BCRYPT_SALT_ROUND)
   );
 
-  const user = await User.create({
+  const newUser = new User({
     ...userData,
-    password: hasedPassword,
+    password: hashedPassword,
     role: userData.role || "USER",
+    status: "ACTIVE",
   });
 
-  return user;
+  await newUser.save();
+
+  // Create Wallet for USER or AGENT
+  if (newUser.role === "USER" || newUser.role === "AGENT") {
+    const newWallet = new Wallet({
+      owner: newUser._id,
+      balance: 50,
+      status: "ACTIVE",
+    });
+
+    await newWallet.save();
+    newUser.wallet = new Types.ObjectId(newWallet._id);
+    await newUser.save();
+  }
+
+  const userWithWallet = await User.findById(newUser._id).populate({
+    path: "wallet",
+    select: "balance status", // include more if needed
+  });
+  return { user: userWithWallet };
 };
 
 export const UserServices = {
