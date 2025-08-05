@@ -1,4 +1,5 @@
 import AppError from "../../errorHelpers/appError/AppError";
+import { UserTransaction } from "../transaction/userTransactionHistory/userTransactionHistory.model";
 import { User } from "../user/user.model";
 import { Wallet } from "./wallet.model";
 import httpStatus from "http-status-codes";
@@ -26,6 +27,13 @@ export const topUpWallet = async (phone: string, amount: number) => {
 
   wallet.balance += amount;
   await wallet.save();
+
+
+  await UserTransaction.create({
+    userId: user._id,
+    type: "TOP-UP",
+    amount,
+  });
 
   return {
     balance: wallet.balance,
@@ -56,6 +64,13 @@ export const withdrawBalance = async ({
 
   wallet.balance -= amount;
   await wallet.save();
+
+   await UserTransaction.create({
+     userId: user._id,
+     type: "WITHDRAW",
+     amount,
+   });
+
 
   return {
     balance: wallet.balance,
@@ -99,6 +114,13 @@ export const transferMoney = async ({
 
   await senderWallet.save();
   await receiverWallet.save();
+
+  await UserTransaction.create({
+    userId: sender._id,
+    type: "SEND-MONEY",
+    amount,
+    reference: receiver.phone,
+  });
 
   return {
     senderBalance: senderWallet.balance,
