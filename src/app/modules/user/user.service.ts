@@ -50,6 +50,18 @@ export const createUser = async (userData: IUser) => {
   return { user: userWithWallet };
 };
 
+// Get All User //
+export const getAllUsers = async () => {
+  return User.find().select("-password");
+};
+
+// Get A User //
+export const getUserById = async (id: string) => {
+  return User.findById(id).select("-password");
+};
+
 export const UserServices = {
   createUser,
+  getAllUsers,
+  getUserById,
 };
