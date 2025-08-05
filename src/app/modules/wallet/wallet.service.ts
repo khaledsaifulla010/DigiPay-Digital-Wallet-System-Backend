@@ -62,7 +62,52 @@ export const withdrawBalance = async ({
   };
 };
 
+// Send money to another user
+export const transferMoney = async ({
+  senderPhone,
+  receiverPhone,
+  amount,
+}: {
+  senderPhone: string;
+  receiverPhone: string;
+  amount: number;
+}) => {
+  if (senderPhone === receiverPhone) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Cannot transfer to yourself");
+  }
+
+  const sender = await User.findOne({ phone: senderPhone });
+  const receiver = await User.findOne({ phone: receiverPhone });
+
+  if (!sender || !receiver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Sender or receiver not found");
+  }
+
+  const senderWallet = await Wallet.findOne({ owner: sender._id });
+  const receiverWallet = await Wallet.findOne({ owner: receiver._id });
+
+  if (!senderWallet || !receiverWallet) {
+    throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
+  }
+
+  if (senderWallet.balance < amount) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
+  }
+
+  senderWallet.balance -= amount;
+  receiverWallet.balance += amount;
+
+  await senderWallet.save();
+  await receiverWallet.save();
+
+  return {
+    senderBalance: senderWallet.balance,
+    receiverBalance: receiverWallet.balance,
+  };
+};
+
 export const WalletServices = {
   topUpWallet,
   withdrawBalance,
+  transferMoney,
 };

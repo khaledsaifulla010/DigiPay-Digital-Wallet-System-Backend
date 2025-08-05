@@ -33,7 +33,30 @@ export const withdrawMoney = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// Send money to another user
+export const transferMoney = catchAsync(async (req: Request, res: Response) => {
+  const { senderPhone, receiverPhone, amount } = req.body;
+  const result = await WalletServices.transferMoney({
+    senderPhone,
+    receiverPhone,
+    amount,
+  });
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: `Successfully transferred ${amount} Taka from ${senderPhone} to ${receiverPhone}`,
+    data: {
+      Sender_Phone: senderPhone,
+      Receiver_Phone: receiverPhone,
+      Transfer_Amount: amount,
+      Sender_Balance: result.senderBalance,
+    },
+  });
+});
+
 export const WalletControllers = {
   topUpWallet,
   withdrawMoney,
+  transferMoney,
 };
