@@ -31,7 +31,7 @@ export const createUser = async (userData: IUser) => {
   await newUser.save();
 
   // Create Wallet for USER
-  if (newUser.role === "USER" || newUser.role === "AGENT") {
+  if (newUser.role === "USER") {
     const newWallet = new Wallet({
       owner: newUser._id,
       balance: 50,

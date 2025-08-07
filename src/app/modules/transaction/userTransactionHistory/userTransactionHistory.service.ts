@@ -18,25 +18,3 @@ export const getUserTransactions = async (userId: string | Types.ObjectId) => {
 export const UserTransactionHistoryServices = {
   getUserTransactions,
 };
-
-
-// export const createUserTransaction = async ({
-//   userId,
-//   type,
-//   amount,
-//   reference,
-// }: {
-//   userId: string;
-//   type: "TOP-UP" | "SEND-MONEY" | "WITHDRAW";
-//   amount: number;
-//   reference?: string;
-// }) => {
-//   const transaction = await UserTransaction.create({
-//     userId,
-//     type,
-//     amount,
-//     reference,
-//   });
-
-//   return transaction;
-// };

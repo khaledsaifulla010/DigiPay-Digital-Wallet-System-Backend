@@ -1,7 +1,7 @@
 import { Schema, model } from "mongoose";
-import { IUserTransactionHistory } from "./userTransactionHistory.interface";
+import { IAgentCommissionHistory } from "./agentCommissionHistory.interface";
 
-const userTransactionHistorySchema = new Schema<IUserTransactionHistory>(
+const AgentCommissionHistoryHistorySchema = new Schema<IAgentCommissionHistory>(
   {
     userId: {
       type: Schema.Types.ObjectId,
@@ -10,10 +10,14 @@ const userTransactionHistorySchema = new Schema<IUserTransactionHistory>(
     },
     type: {
       type: String,
-      enum: ["CASH-IN", "SEND-MONEY", "CASHOUT"],
+      enum: ["CASH-IN", "CASHOUT"],
       required: true,
     },
     amount: {
+      type: Number,
+      required: true,
+    },
+    commission: {
       type: Number,
       required: true,
     },
@@ -28,7 +32,7 @@ const userTransactionHistorySchema = new Schema<IUserTransactionHistory>(
   { timestamps: true, versionKey: false }
 );
 
-export const UserTransaction = model<IUserTransactionHistory>(
-  "UserTransaction",
-  userTransactionHistorySchema
+export const AgentCommissionHistory = model<IAgentCommissionHistory>(
+  "AgentCommissionHistory",
+  AgentCommissionHistoryHistorySchema
 );

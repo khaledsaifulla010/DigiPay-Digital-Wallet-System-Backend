@@ -1,17 +1,12 @@
 import express from "express";
-import { WalletControllers } from "./wallet.controller";
+
 import { validateRequest } from "../../middlewares/validateRequest";
-// import { TopUpValidationSchema } from "./topup/topup.validation";
 import { WithdrawValidationSchema } from "./withdraw/withdraw.validation";
 import { TransferValidationSchema } from "./transfer/transfer.validation";
+import { WalletControllers } from "./wallet.controller";
+import { CashInValidationSchema } from "./cashin/cashin.validation";
 
 const router = express.Router();
-
-// router.post(
-//   "/topup",
-//   validateRequest(TopUpValidationSchema),
-//   WalletControllers.topUpWallet
-// );
 
 router.post(
   "/withdraw",
@@ -22,5 +17,10 @@ router.post(
   "/transfer",
   validateRequest(TransferValidationSchema),
   WalletControllers.transferMoney
+);
+router.post(
+  "/cashIn",
+  validateRequest(CashInValidationSchema),
+  WalletControllers.cashInMoney
 );
 export const WalletRoutes = router;
