@@ -5,41 +5,37 @@ import { WalletServices, withdrawBalance } from "./wallet.service";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 
-// Add money (top-up)
-export const topUpWallet = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const { phone, amount } = req.body;
-
-    const balance = await WalletServices.topUpWallet(phone, amount);
-    sendResponse(res, {
-      statusCode: httpStatus.OK,
-      success: true,
-      message: `Top-up of ${amount} Taka was completed successfully. New balance: ${balance.balance} Taka.`,
-      data: balance,
-    });
-  }
-);
-
 // Withdraw money
 export const withdrawMoney = catchAsync(async (req: Request, res: Response) => {
-  const { phone, amount } = req.body;
-  const withdrawAmount = await withdrawBalance({ phone, amount });
+  const { senderPhone, receiverPhone, amount, role } = req.body;
+  const result = await WalletServices.withdrawBalance({
+    senderPhone,
+    receiverPhone,
+    amount,
+    role,
+  });
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: `Successfully withdrew ${amount} Taka from your wallet. New balance: ${withdrawAmount.balance} Taka.`,
-    data: withdrawAmount,
+    message: `Successfully cashout ${amount} Taka from your wallet. New balance: ${result.senderBalance} Taka.`,
+    data: {
+      Sender_Phone: senderPhone,
+      Receiver_Phone: receiverPhone,
+      Cashout_Amount: amount,
+      Sender_Balance: result.senderBalance,
+    },
   });
 });
 
 // Send money to another user
 export const transferMoney = catchAsync(async (req: Request, res: Response) => {
-  const { senderPhone, receiverPhone, amount } = req.body;
+  const { senderPhone, receiverPhone, amount, role } = req.body;
   const result = await WalletServices.transferMoney({
     senderPhone,
     receiverPhone,
     amount,
+    role,
   });
 
   sendResponse(res, {
@@ -56,7 +52,6 @@ export const transferMoney = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const WalletControllers = {
-  topUpWallet,
   withdrawMoney,
   transferMoney,
 };

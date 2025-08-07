@@ -4,76 +4,66 @@ import { User } from "../user/user.model";
 import { Wallet } from "./wallet.model";
 import httpStatus from "http-status-codes";
 
-// Add money (top-up)
-export const topUpWallet = async (phone: string, amount: number) => {
-  const user = await User.findOne({ phone });
-
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, "User not found");
-  }
-
-  if (!user.wallet) {
-    throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
-  }
-
-  const wallet = await Wallet.findById(user.wallet);
-  if (!wallet) {
-    throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
-  }
-
-  if (wallet.status === "BLOCKED") {
-    throw new AppError(httpStatus.FORBIDDEN, "Wallet is blocked");
-  }
-
-  wallet.balance += amount;
-  await wallet.save();
-
-
-  await UserTransaction.create({
-    userId: user._id,
-    type: "TOP-UP",
-    amount,
-  });
-
-  return {
-    balance: wallet.balance,
-  };
-};
-
-// Withdraw money
+// Withdraw money (Cashout)
 export const withdrawBalance = async ({
-  phone,
+  senderPhone,
+  receiverPhone,
   amount,
 }: {
-  phone: string;
+  senderPhone: string;
+  receiverPhone: string;
   amount: number;
+  role: string;
 }) => {
-  const user = await User.findOne({ phone });
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  if (senderPhone === receiverPhone) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Cannot cashout to yourself");
   }
 
-  const wallet = await Wallet.findOne({ owner: user._id });
-  if (!wallet) {
+  const sender = await User.findOne({ phone: senderPhone });
+  const receiver = await User.findOne({ phone: receiverPhone });
+
+  if (!sender) {
+    throw new AppError(httpStatus.NOT_FOUND, "Your number not found");
+  }
+
+  if (!receiver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Agent number not found");
+  }
+
+  if (receiver.role === "USER") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cannot cashout money to an user number."
+    );
+  }
+
+  const senderWallet = await Wallet.findOne({ owner: sender._id });
+  const receiverWallet = await Wallet.findOne({ owner: receiver._id });
+
+  if (!senderWallet || !receiverWallet) {
     throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
   }
 
-  if (wallet.balance < amount) {
+  if (senderWallet.balance < amount) {
     throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
   }
 
-  wallet.balance -= amount;
-  await wallet.save();
+  senderWallet.balance -= amount;
+  receiverWallet.balance += amount;
 
-   await UserTransaction.create({
-     userId: user._id,
-     type: "WITHDRAW",
-     amount,
-   });
+  await senderWallet.save();
+  await receiverWallet.save();
 
+  await UserTransaction.create({
+    userId: sender._id,
+    type: "CASHOUT",
+    amount,
+    reference: receiver.phone,
+  });
 
   return {
-    balance: wallet.balance,
+    senderBalance: senderWallet.balance,
+    receiverBalance: receiverWallet.balance,
   };
 };
 
@@ -86,6 +76,7 @@ export const transferMoney = async ({
   senderPhone: string;
   receiverPhone: string;
   amount: number;
+  role: string;
 }) => {
   if (senderPhone === receiverPhone) {
     throw new AppError(httpStatus.BAD_REQUEST, "Cannot transfer to yourself");
@@ -94,8 +85,20 @@ export const transferMoney = async ({
   const sender = await User.findOne({ phone: senderPhone });
   const receiver = await User.findOne({ phone: receiverPhone });
 
-  if (!sender || !receiver) {
-    throw new AppError(httpStatus.NOT_FOUND, "Sender or receiver not found");
+
+   if (!sender) {
+     throw new AppError(httpStatus.NOT_FOUND, "Your number not found");
+   }
+
+   if (!receiver) {
+     throw new AppError(httpStatus.NOT_FOUND, "Receiver number not found");
+   }
+
+  if (receiver.role === "AGENT") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cannot send money to an agent number."
+    );
   }
 
   const senderWallet = await Wallet.findOne({ owner: sender._id });
@@ -129,7 +132,6 @@ export const transferMoney = async ({
 };
 
 export const WalletServices = {
-  topUpWallet,
   withdrawBalance,
   transferMoney,
 };

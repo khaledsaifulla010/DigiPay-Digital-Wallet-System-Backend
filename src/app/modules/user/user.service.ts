@@ -30,7 +30,7 @@ export const createUser = async (userData: IUser) => {
 
   await newUser.save();
 
-  // Create Wallet for USER or AGENT
+  // Create Wallet for USER
   if (newUser.role === "USER" || newUser.role === "AGENT") {
     const newWallet = new Wallet({
       owner: newUser._id,
@@ -42,10 +42,22 @@ export const createUser = async (userData: IUser) => {
     newUser.wallet = new Types.ObjectId(newWallet._id);
     await newUser.save();
   }
+  // Create Wallet for AGENT
+  if (newUser.role === "AGENT") {
+    const newWallet = new Wallet({
+      owner: newUser._id,
+      balance: 500,
+      status: "ACTIVE",
+    });
+
+    await newWallet.save();
+    newUser.wallet = new Types.ObjectId(newWallet._id);
+    await newUser.save();
+  }
 
   const userWithWallet = await User.findById(newUser._id).populate({
     path: "wallet",
-    select: "balance status", // include more if needed
+    select: "balance status",
   });
   return { user: userWithWallet };
 };

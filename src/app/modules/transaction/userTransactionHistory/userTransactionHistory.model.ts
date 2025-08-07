@@ -10,7 +10,7 @@ const userTransactionHistorySchema = new Schema<IUserTransactionHistory>(
     },
     type: {
       type: String,
-      enum: ["TOP-UP", "SEND-MONEY", "WITHDRAW"],
+      enum: ["TOP-UP", "SEND-MONEY", "CASHOUT"],
       required: true,
     },
     amount: {
