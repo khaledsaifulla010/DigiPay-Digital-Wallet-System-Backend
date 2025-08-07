@@ -52,13 +52,26 @@ export const withdrawBalance = async ({
   senderWallet.balance -= amount;
   receiverWallet.balance += amount;
 
+  const commission = Number(((amount * 4) / 100).toFixed(2));
+  senderWallet.balance -= commission;
+  receiverWallet.balance += commission;
+
   await senderWallet.save();
   await receiverWallet.save();
+  
 
   await UserTransaction.create({
     userId: sender._id,
     type: "CASHOUT",
     amount,
+    reference: receiver.phone,
+  });
+
+  await AgentCommissionHistory.create({
+    userId: receiver._id,
+    type: "CASHOUT",
+    amount: amount,
+    commission: commission,
     reference: receiver.phone,
   });
 
