@@ -1,5 +1,6 @@
 import AppError from "../../errorHelpers/appError/AppError";
 import { AgentCommissionHistory } from "../transaction/agentCommissionHistory/agentCommissionHistory.model";
+import { AllTransactions } from "../transaction/allTransactions/allTransactions.model";
 import { UserTransaction } from "../transaction/userTransactionHistory/userTransactionHistory.model";
 import { User } from "../user/user.model";
 import { ITransferRequest } from "./transfer/transfer.interface";
@@ -59,6 +60,18 @@ export const transferMoney = async ({
     amount: amount,
     receiver_phone: receiver.phone,
   });
+  await AllTransactions.create({
+    senderId: sender._id,
+    senderName: sender.name,
+    senderRole: sender.role,
+    receiverId: receiver._id,
+    receiverName: receiver.name,
+    receiverRole: receiver.role,
+    transactionType: "SEND-MONEY",
+    amount: amount,
+    sender_phone: sender.phone,
+    receiver_phone: receiver.phone,
+  });
 
   return {
     name: sender.name,
@@ -113,7 +126,7 @@ export const withdrawBalance = async ({
   senderWallet.balance -= amount;
   receiverWallet.balance += amount;
 
-  const commission = Number(((amount * 4) / 100).toFixed(2));
+  const commission = Number(((amount * 4) / 1000).toFixed(2));
   senderWallet.balance -= commission;
   receiverWallet.balance += commission;
 
@@ -122,8 +135,8 @@ export const withdrawBalance = async ({
 
   await UserTransaction.create({
     userId: sender._id,
-    type: "CASHOUT",
     userName: sender.name,
+    type: "CASHOUT",
     amount: amount,
     receiver_phone: receiver.phone,
   });
@@ -134,6 +147,19 @@ export const withdrawBalance = async ({
     amount: amount,
     commission: commission,
     reference: receiver.phone,
+  });
+
+  await AllTransactions.create({
+    senderId: sender._id,
+    senderName: sender.name,
+    senderRole: sender.role,
+    receiverId: receiver._id,
+    receiverName: receiver.name,
+    receiverRole: receiver.role,
+    transactionType: "CASHOUT",
+    amount: amount,
+    sender_phone: sender.phone,
+    receiver_phone: receiver.phone,
   });
 
   return {
@@ -190,14 +216,15 @@ export const cashInMoney = async ({
   senderWallet.balance -= amount;
   receiverWallet.balance += amount;
 
-  const commission = Number(((amount * 4) / 100).toFixed(2));
+  const commission = Number(((amount * 4) / 1000).toFixed(2));
   senderWallet.balance += commission;
 
   await senderWallet.save();
   await receiverWallet.save();
 
   await UserTransaction.create({
-    userId: receiver._id,
+    userId: sender._id,
+    userName: sender.name,
     amount: amount,
     type: "CASH-IN",
     reference: sender.phone,
@@ -209,6 +236,19 @@ export const cashInMoney = async ({
     amount: amount,
     commission: commission,
     reference: receiver.phone,
+  });
+
+  await AllTransactions.create({
+    senderId: sender._id,
+    senderName: sender.name,
+    senderRole: sender.role,
+    receiverId: receiver._id,
+    receiverName: receiver.name,
+    receiverRole: receiver.role,
+    transactionType: "CASH-IN",
+    amount: amount,
+    sender_phone: sender.phone,
+    receiver_phone: receiver.phone,
   });
 
   return {
