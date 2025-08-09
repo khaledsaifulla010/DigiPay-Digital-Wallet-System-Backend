@@ -39,9 +39,21 @@ export const transferMoney = async ({
       "Cannot send money to an agent number."
     );
   }
+  if (receiver.role === "ADMIN") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cannot send money to an admin number."
+    );
+  }
+  if (sender.status === "BLOCKED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Account is Blocked. Please Contact With Your Admin."
+    );
+  }
 
-  const senderWallet = await Wallet.findOne({ owner: sender._id });
-  const receiverWallet = await Wallet.findOne({ owner: receiver._id });
+  const senderWallet = await Wallet.findOne({ userId: sender._id });
+  const receiverWallet = await Wallet.findOne({ userId: receiver._id });
 
   if (!senderWallet || !receiverWallet) {
     throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
@@ -49,6 +61,19 @@ export const transferMoney = async ({
 
   if (senderWallet.balance < amount) {
     throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
+  }
+
+  if (senderWallet.userStatus === "BLOCKED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Account is Blocked. Please Contact With Your Admin."
+    );
+  }
+  if (senderWallet.walletStatus === "BLOCKED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Wallet is Blocked. Please Contact With Your Admin."
+    );
   }
 
   senderWallet.balance -= amount;
@@ -115,9 +140,21 @@ export const withdrawBalance = async ({
       "Cannot cashout money to an user number."
     );
   }
+  if (receiver.role === "ADMIN") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cannot cashout money to an admin number."
+    );
+  }
+  if (sender.status === "BLOCKED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Account is Blocked. Please Contact With Your Admin."
+    );
+  }
 
-  const senderWallet = await Wallet.findOne({ owner: sender._id });
-  const receiverWallet = await Wallet.findOne({ owner: receiver._id });
+  const senderWallet = await Wallet.findOne({ userId: sender._id });
+  const receiverWallet = await Wallet.findOne({ userId: receiver._id });
 
   if (!senderWallet || !receiverWallet) {
     throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
@@ -127,6 +164,18 @@ export const withdrawBalance = async ({
     throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
   }
 
+  if (senderWallet.userStatus === "BLOCKED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Account is Blocked. Please Contact With Your Admin."
+    );
+  }
+  if (senderWallet.walletStatus === "BLOCKED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Wallet is Blocked. Please Contact With Your Admin."
+    );
+  }
   senderWallet.balance -= amount;
   receiverWallet.balance += amount;
 
@@ -173,7 +222,6 @@ export const withdrawBalance = async ({
 };
 
 // AGENT ROLE //
-
 // Add money to any user's wallet (cash-in)
 export const cashInMoney = async ({
   senderPhone,
@@ -205,9 +253,21 @@ export const cashInMoney = async ({
       "Cannot cash in money to an agent number."
     );
   }
+  if (receiver.role === "ADMIN") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cannot cash in money to an admin number."
+    );
+  }
+  if (sender.status === "BLOCKED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Account is Blocked. Please Contact With Your Admin."
+    );
+  }
 
-  const senderWallet = await Wallet.findOne({ owner: sender._id });
-  const receiverWallet = await Wallet.findOne({ owner: receiver._id });
+  const senderWallet = await Wallet.findOne({ userId: sender._id });
+  const receiverWallet = await Wallet.findOne({ userId: receiver._id });
 
   if (!senderWallet || !receiverWallet) {
     throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
@@ -215,6 +275,18 @@ export const cashInMoney = async ({
 
   if (senderWallet.balance < amount) {
     throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
+  }
+  if (senderWallet.userStatus === "BLOCKED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Account is Blocked. Please Contact With Your Admin."
+    );
+  }
+  if (senderWallet.walletStatus === "BLOCKED") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Wallet is Blocked. Please Contact With Your Admin."
+    );
   }
 
   senderWallet.balance -= amount;
@@ -263,7 +335,6 @@ export const cashInMoney = async ({
 };
 
 // ADMIN ROLE //
-
 // GET ALL WALLETS //
 export const getAllWallets = async () => {
   return Wallet.find();
