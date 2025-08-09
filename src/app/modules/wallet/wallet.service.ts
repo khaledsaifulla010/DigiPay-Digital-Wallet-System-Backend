@@ -218,8 +218,22 @@ export const cashInMoney = async ({
   };
 };
 
+// ADMIN ROLE //
+
+// GET ALL WALLETS //
+export const getAllWallets = async () => {
+  return Wallet.find();
+};
+
+// Get A Wallet //
+export const getWalletById = async (id: string) => {
+  return Wallet.findById(id);
+};
+
 export const WalletServices = {
   withdrawBalance,
   transferMoney,
   cashInMoney,
+  getAllWallets,
+  getWalletById,
 };

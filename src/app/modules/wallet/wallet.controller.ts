@@ -4,6 +4,7 @@ import httpStatus from "http-status-codes";
 import { WalletServices } from "./wallet.service";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
+import AppError from "../../errorHelpers/appError/AppError";
 
 //  USER ROLE
 // Send money to another user
@@ -77,8 +78,42 @@ export const cashInMoney = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+// ADMIN ROLE
+// Get All Wallets
+const getAllWallets = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const wallets = await WalletServices.getAllWallets();
+    sendResponse(res, {
+      statusCode: httpStatus.CREATED,
+      success: true,
+      message: "Wallets Retrieve Sucessfully.",
+      data: wallets,
+    });
+  }
+);
+
+// Get A Wallets
+const getWalletById = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const wallet = await WalletServices.getWalletById(req.params.id);
+
+    if (!wallet) {
+      throw new AppError(httpStatus.BAD_REQUEST, "Wallet Not Found!", "");
+    }
+
+    sendResponse(res, {
+      statusCode: httpStatus.CREATED,
+      success: true,
+      message: "Wallet Retrieve Sucessfully.",
+      data: wallet,
+    });
+  }
+);
+
 export const WalletControllers = {
   withdrawMoney,
   transferMoney,
   cashInMoney,
+  getAllWallets,
+  getWalletById,
 };
