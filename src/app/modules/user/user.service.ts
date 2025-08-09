@@ -7,6 +7,7 @@ import { envVars } from "../../config/env";
 import { Wallet } from "../wallet/wallet.model";
 import { Types } from "mongoose";
 import { wallletStatus } from "../wallet/wallet.interface";
+import { JwtPayload } from "jsonwebtoken";
 
 // Create User //
 export const createUser = async (userData: IUser) => {
@@ -58,7 +59,55 @@ export const createUser = async (userData: IUser) => {
 };
 
 // UPDATE A USER //
+const changeAgentStatus = async (
+  userId: string,
+  status: UserStatus,
+  decodedToken: JwtPayload
+) => {
+  if (decodedToken.role !== UserRole.ADMIN) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Only Admins can approve or suspend agents.",
+      ""
+    );
+  }
+  if (decodedToken.userId === userId) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Admins cannot change their own status.",
+      ""
+    );
+  }
 
+  if (![UserStatus.ACTIVE, UserStatus.BLOCKED].includes(status)) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Invalid status value. Must be ACTIVE or BLOCKED.",
+      ""
+    );
+  }
+  const agent = await User.findById(userId).select("-password");
+  if (!agent) {
+    throw new AppError(httpStatus.NOT_FOUND, "Agent not found!", "");
+  }
+  if (agent.role !== UserRole.AGENT) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "This action can only be applied to agents.",
+      ""
+    );
+  }
+  agent.status = status;
+  await agent.save();
+
+  await Wallet.findOneAndUpdate(
+    { userId: new Types.ObjectId(userId) },
+    { userStatus: status },
+    { new: true }
+  );
+
+  return agent;
+};
 
 // Get All User //
 export const getAllUsers = async () => {
@@ -73,5 +122,6 @@ export const getUserById = async (id: string) => {
 export const UserServices = {
   createUser,
   getAllUsers,
+  changeAgentStatus,
   getUserById,
 };

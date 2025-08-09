@@ -18,4 +18,9 @@ router.get(
   UserControllers.getAllUsers
 );
 router.get("/:id", checkAuth(UserRole.ADMIN), UserControllers.getUserById);
+router.patch(
+  "/:id",
+  checkAuth(...Object.values(UserRole)),
+  UserControllers.changeAgentStatus
+);
 export const UserRoutes = router;
