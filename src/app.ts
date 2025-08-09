@@ -3,10 +3,25 @@ import cors from "cors";
 import { router } from "./app/routes";
 import { globalErrorHandler } from "./app/errorHelpers/globalErrorHandler/globalErrorHandler";
 import NotFoundRoute from "./app/middlewares/NotFoundRoute";
-const app = express();
-app.use(express.json());
+import passport from "passport";
+import "./app/config/passport";
+import cookieParser from "cookie-parser";
+import { envVars } from "./app/config/env";
 
-app.use(cors());
+
+
+const app = express();
+
+app.use(express.json());
+app.use(passport.initialize());
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: envVars.FRONTEND_URL,
+    credentials: true,
+  })
+);
+
 
 // API END POINTS
 app.use("/api/v1", router);

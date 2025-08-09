@@ -1,7 +1,14 @@
 import { Types } from "mongoose";
 
-export type UserRole = "USER" | "AGENT" | "ADMIN";
-export type UserStatus = "ACTIVE" | "BLOCKED";
+export enum UserRole {
+  USER = "USER",
+  AGENT = "AGENT",
+  ADMIN = "ADMIN",
+}
+export enum UserStatus {
+  ACTIVE = "ACTIVE",
+  BLOCKED = "BLOCKED",
+}
 
 export interface IUser {
   _id?: string;

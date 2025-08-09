@@ -1,9 +1,19 @@
 import { Types } from "mongoose";
-import { IUser } from "../user/user.interface";
+import { IUser, UserRole, UserStatus } from "../user/user.interface";
+
+export enum wallletStatus {
+  ACTIVE = "ACTIVE",
+  BLOCKED = "BLOCKED",
+}
 
 export interface IWallet {
   _id?: string;
-  owner: Types.ObjectId | IUser;
+  userId: Types.ObjectId | IUser;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
+  userRole: UserRole;
+  userStatus: UserStatus;
+  walletStatus: wallletStatus;
   balance: number;
-  status?: "ACTIVE" | "BLOCKED";
 }
