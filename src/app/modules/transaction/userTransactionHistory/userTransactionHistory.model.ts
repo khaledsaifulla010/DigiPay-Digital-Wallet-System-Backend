@@ -8,21 +8,22 @@ const userTransactionHistorySchema = new Schema<IUserTransactionHistory>(
       ref: "User",
       required: true,
     },
+    userName: {
+      type: String,
+      ref: "User",
+      required: true,
+    },
     type: {
       type: String,
-      enum: ["TOP-UP", "SEND-MONEY", "CASHOUT"],
+      enum: ["CASH-IN", "SEND-MONEY", "CASHOUT"],
       required: true,
     },
     amount: {
       type: Number,
       required: true,
     },
-    reference: {
+    receiver_phone: {
       type: String,
-    },
-    timestamp: {
-      type: Date,
-      default: Date.now,
     },
   },
   { timestamps: true, versionKey: false }
