@@ -8,20 +8,18 @@ import "./app/config/passport";
 import cookieParser from "cookie-parser";
 import { envVars } from "./app/config/env";
 
-
-
 const app = express();
-
 app.use(express.json());
 app.use(passport.initialize());
 app.use(cookieParser());
+app.set("trust proxy", 1);
+app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
     origin: envVars.FRONTEND_URL,
     credentials: true,
   })
 );
-
 
 // API END POINTS
 app.use("/api/v1", router);
