@@ -1,9 +1,13 @@
 import { Types } from "mongoose";
-import { IUser } from "../user/user.interface";
+import { IUser, UserRole, UserStatus } from "../user/user.interface";
 
 export interface IWallet {
   _id?: string;
-  owner: Types.ObjectId | IUser;
+  userId: Types.ObjectId | IUser;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
+  userRole: UserRole;
+  userStatus: UserStatus;
   balance: number;
-  status?: "ACTIVE" | "BLOCKED";
 }

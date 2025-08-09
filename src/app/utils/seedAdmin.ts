@@ -31,8 +31,13 @@ export const seedAdmin = async () => {
     } as IUser);
 
     const wallet = await Wallet.create({
+      userId: admin._id,
+      userName: admin.name,
+      userEmail: admin.email,
+      userPhone: admin.phone,
+      userRole: admin.role,
+      userStatus: admin.status,
       balance: 50000,
-      owner: admin._id,
     });
 
     admin.wallet = new Types.ObjectId(wallet._id);

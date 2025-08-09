@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { IUser } from "./user.interface";
+import { IUser, UserRole, UserStatus } from "./user.interface";
 
 const userSchema = new Schema<IUser>(
   {
@@ -9,13 +9,15 @@ const userSchema = new Schema<IUser>(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["USER", "AGENT", "ADMIN"],
-      default: "USER",
+      enum: Object.values(UserRole),
+      default: UserRole.USER,
+      required: true,
     },
     status: {
       type: String,
-      enum: ["ACTIVE", "BLOCKED"],
-      default: "ACTIVE",
+      enum: Object.values(UserStatus),
+      default: UserStatus.ACTIVE,
+      required: true,
     },
     wallet: {
       type: Schema.Types.ObjectId,

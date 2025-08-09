@@ -1,4 +1,4 @@
-import { IUser } from "./user.interface";
+import { IUser, UserRole, UserStatus } from "./user.interface";
 import bcrypt from "bcryptjs";
 import { User } from "./user.model";
 import httpStatus from "http-status-codes";
@@ -6,7 +6,6 @@ import AppError from "../../errorHelpers/appError/AppError";
 import { envVars } from "../../config/env";
 import { Wallet } from "../wallet/wallet.model";
 import { Types } from "mongoose";
-
 // Create User //
 export const createUser = async (userData: IUser) => {
   const userEmail = userData.email;
@@ -21,40 +20,34 @@ export const createUser = async (userData: IUser) => {
     Number(envVars.BCRYPT_SALT_ROUND)
   );
 
-  const newUser = new User({
+  const newUser = await User.create({
     ...userData,
     password: hashedPassword,
-    role: userData.role || "USER",
-    status: "ACTIVE",
+    role: userData.role || UserRole.USER,
+    status: userData.status || UserStatus.ACTIVE,
   });
 
-  await newUser.save();
+  const walletBalance = newUser.role === UserRole.AGENT ? 500 : 50;
 
-  // Create Wallet for USER
-  if (newUser.role === "USER") {
-    const newWallet = new Wallet({
-      owner: newUser._id,
-      balance: 50,
-      status: "ACTIVE",
+  if ([UserRole.USER, UserRole.AGENT].includes(newUser.role)) {
+
+     if (!newUser._id) {
+       throw new Error("User _id is undefined or null, cannot create wallet");
+     }
+
+    const newWallet = await Wallet.create({
+      userId: newUser._id,
+      userName: newUser.name,
+      userEmail: newUser.email,
+      userPhone: newUser.phone,
+      userRole: newUser.role,
+      userStatus: newUser.status,
+      balance: walletBalance,
     });
 
-    await newWallet.save();
     newUser.wallet = new Types.ObjectId(newWallet._id);
     await newUser.save();
   }
-  // Create Wallet for AGENT
-  if (newUser.role === "AGENT") {
-    const newWallet = new Wallet({
-      owner: newUser._id,
-      balance: 500,
-      status: "ACTIVE",
-    });
-
-    await newWallet.save();
-    newUser.wallet = new Types.ObjectId(newWallet._id);
-    await newUser.save();
-  }
-
   const userWithWallet = await User.findById(newUser._id).populate({
     path: "wallet",
     select: "balance status",
