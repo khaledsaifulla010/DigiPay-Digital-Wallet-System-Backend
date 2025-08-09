@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { IWallet } from "./wallet.interface";
+import { IWallet, wallletStatus } from "./wallet.interface";
 import { UserRole, UserStatus } from "../user/user.interface";
 
 const walletSchema = new Schema<IWallet>(
@@ -30,6 +30,13 @@ const walletSchema = new Schema<IWallet>(
     userStatus: {
       type: String,
       enum: ["ACTIVE", "BLOCKED"] as UserStatus[],
+      default: UserStatus.ACTIVE,
+      required: true,
+    },
+    walletStatus: {
+      type: String,
+      enum: ["ACTIVE", "BLOCKED"] as wallletStatus[],
+      default: wallletStatus.ACTIVE,
       required: true,
     },
     balance: {

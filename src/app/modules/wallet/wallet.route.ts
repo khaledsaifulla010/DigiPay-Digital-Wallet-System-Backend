@@ -33,5 +33,10 @@ router.get(
 );
 
 router.get("/:id", checkAuth(UserRole.ADMIN), WalletControllers.getWalletById);
+router.patch(
+  "/:id",
+  checkAuth(...Object.values(UserRole)),
+  WalletControllers.updateUserWallet
+);
 
 export const WalletRoutes = router;

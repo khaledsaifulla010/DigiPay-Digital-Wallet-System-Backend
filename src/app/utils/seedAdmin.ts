@@ -6,6 +6,7 @@ import { envVars } from "../config/env";
 import { IUser } from "../modules/user/user.interface";
 import { Wallet } from "../modules/wallet/wallet.model";
 import { Types } from "mongoose";
+import { wallletStatus } from "../modules/wallet/wallet.interface";
 export const seedAdmin = async () => {
   try {
     const isAdminExist = await User.findOne({
@@ -37,6 +38,7 @@ export const seedAdmin = async () => {
       userPhone: admin.phone,
       userRole: admin.role,
       userStatus: admin.status,
+      walletStatus: wallletStatus.ACTIVE,
       balance: 50000,
     });
 

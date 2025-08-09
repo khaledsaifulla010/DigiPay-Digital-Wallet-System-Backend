@@ -1,3 +1,4 @@
+import { JwtPayload } from "jsonwebtoken";
 import AppError from "../../errorHelpers/appError/AppError";
 import { AgentCommissionHistory } from "../transaction/agentCommissionHistory/agentCommissionHistory.model";
 import { AllTransactions } from "../transaction/allTransactions/allTransactions.model";
@@ -6,6 +7,9 @@ import { User } from "../user/user.model";
 import { ITransferRequest } from "./transfer/transfer.interface";
 import { Wallet } from "./wallet.model";
 import httpStatus from "http-status-codes";
+import { IWallet } from "./wallet.interface";
+import { UserRole } from "../user/user.interface";
+import { Types } from "mongoose";
 
 // USER ROLE //
 // Send money to another user
@@ -265,6 +269,46 @@ export const getAllWallets = async () => {
   return Wallet.find();
 };
 
+// UPDATE A USER WALLET STATUS //
+const updateUserWallet = async (
+  userId: string,
+  payload: Partial<IWallet>,
+  decodedToken: JwtPayload
+) => {
+  if (decodedToken.role !== UserRole.ADMIN) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Only ADMIN can update wallet status.",
+      ""
+    );
+  }
+
+  const wallet = await Wallet.findOne({ userId: new Types.ObjectId(userId) });
+  if (!wallet) {
+    throw new AppError(httpStatus.NOT_FOUND, "Wallet not found!", "");
+  }
+
+  const allowedUpdate: Partial<IWallet> = {};
+  if (payload.walletStatus) {
+    allowedUpdate.walletStatus = payload.walletStatus;
+  }
+  if (!allowedUpdate.walletStatus) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "As an ADMIN you can update only user wallet status.",
+      ""
+    );
+  }
+
+  const updatedWallet = await Wallet.findOneAndUpdate(
+    { userId: new Types.ObjectId(userId) },
+    allowedUpdate,
+    { new: true, runValidators: true }
+  );
+
+  return updatedWallet;
+};
+
 // Get A Wallet //
 export const getWalletById = async (id: string) => {
   return Wallet.findById(id);
@@ -276,4 +320,5 @@ export const WalletServices = {
   cashInMoney,
   getAllWallets,
   getWalletById,
+  updateUserWallet,
 };

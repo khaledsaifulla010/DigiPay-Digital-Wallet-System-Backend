@@ -5,6 +5,7 @@ import { WalletServices } from "./wallet.service";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import AppError from "../../errorHelpers/appError/AppError";
+import { JwtPayload } from "jsonwebtoken";
 
 //  USER ROLE
 // Send money to another user
@@ -110,10 +111,31 @@ const getWalletById = catchAsync(
   }
 );
 
+// UPDATE A USER WALLET STATUS //
+const updateUserWallet = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.params.id;
+    const verifiedToken = req.user;
+    const payload = req.body;
+    const userWallet = await WalletServices.updateUserWallet(
+      userId,
+      payload,
+      verifiedToken as JwtPayload
+    );
+    sendResponse(res, {
+      statusCode: httpStatus.CREATED,
+      success: true,
+      message: "User Wallet Status Updated Sucessfully.",
+      data: userWallet,
+    });
+  }
+);
+
 export const WalletControllers = {
   withdrawMoney,
   transferMoney,
   cashInMoney,
   getAllWallets,
   getWalletById,
+  updateUserWallet,
 };

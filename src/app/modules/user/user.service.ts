@@ -6,6 +6,8 @@ import AppError from "../../errorHelpers/appError/AppError";
 import { envVars } from "../../config/env";
 import { Wallet } from "../wallet/wallet.model";
 import { Types } from "mongoose";
+import { wallletStatus } from "../wallet/wallet.interface";
+
 // Create User //
 export const createUser = async (userData: IUser) => {
   const userEmail = userData.email;
@@ -30,10 +32,9 @@ export const createUser = async (userData: IUser) => {
   const walletBalance = newUser.role === UserRole.AGENT ? 500 : 50;
 
   if ([UserRole.USER, UserRole.AGENT].includes(newUser.role)) {
-
-     if (!newUser._id) {
-       throw new Error("User _id is undefined or null, cannot create wallet");
-     }
+    if (!newUser._id) {
+      throw new Error("User _id is undefined or null, cannot create wallet");
+    }
 
     const newWallet = await Wallet.create({
       userId: newUser._id,
@@ -42,6 +43,7 @@ export const createUser = async (userData: IUser) => {
       userPhone: newUser.phone,
       userRole: newUser.role,
       userStatus: newUser.status,
+      walletStatus: wallletStatus.ACTIVE,
       balance: walletBalance,
     });
 
@@ -54,6 +56,9 @@ export const createUser = async (userData: IUser) => {
   });
   return { user: userWithWallet };
 };
+
+// UPDATE A USER //
+
 
 // Get All User //
 export const getAllUsers = async () => {
