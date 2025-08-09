@@ -2,10 +2,71 @@ import AppError from "../../errorHelpers/appError/AppError";
 import { AgentCommissionHistory } from "../transaction/agentCommissionHistory/agentCommissionHistory.model";
 import { UserTransaction } from "../transaction/userTransactionHistory/userTransactionHistory.model";
 import { User } from "../user/user.model";
+import { ITransferRequest } from "./transfer/transfer.interface";
 import { Wallet } from "./wallet.model";
 import httpStatus from "http-status-codes";
 
 // USER ROLE //
+// Send money to another user
+export const transferMoney = async ({
+  senderPhone,
+  receiverPhone,
+  amount,
+}: ITransferRequest) => {
+  if (senderPhone === receiverPhone) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Cannot transfer to yourself");
+  }
+
+  const sender = await User.findOne({ phone: senderPhone });
+  const receiver = await User.findOne({ phone: receiverPhone });
+
+  if (!sender) {
+    throw new AppError(httpStatus.NOT_FOUND, "Your number not found");
+  }
+
+  if (!receiver) {
+    throw new AppError(httpStatus.NOT_FOUND, "Receiver number not found");
+  }
+
+  if (receiver.role === "AGENT") {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Cannot send money to an agent number."
+    );
+  }
+
+  const senderWallet = await Wallet.findOne({ owner: sender._id });
+  const receiverWallet = await Wallet.findOne({ owner: receiver._id });
+
+  if (!senderWallet || !receiverWallet) {
+    throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
+  }
+
+  if (senderWallet.balance < amount) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
+  }
+
+  senderWallet.balance -= amount;
+  receiverWallet.balance += amount;
+
+  await senderWallet.save();
+  await receiverWallet.save();
+
+  await UserTransaction.create({
+    userId: sender._id,
+    userName: sender.name,
+    type: "SEND-MONEY",
+    amount: amount,
+    receiver_phone: receiver.phone,
+  });
+
+  return {
+    name: sender.name,
+    senderBalance: senderWallet.balance,
+    receiverBalance: receiverWallet.balance,
+  };
+};
+
 // Withdraw money (Cashout)
 export const withdrawBalance = async ({
   senderPhone,
@@ -58,13 +119,13 @@ export const withdrawBalance = async ({
 
   await senderWallet.save();
   await receiverWallet.save();
-  
 
   await UserTransaction.create({
     userId: sender._id,
     type: "CASHOUT",
-    amount,
-    reference: receiver.phone,
+    userName: sender.name,
+    amount: amount,
+    receiver_phone: receiver.phone,
   });
 
   await AgentCommissionHistory.create({
@@ -72,68 +133,6 @@ export const withdrawBalance = async ({
     type: "CASHOUT",
     amount: amount,
     commission: commission,
-    reference: receiver.phone,
-  });
-
-  return {
-    senderBalance: senderWallet.balance,
-    receiverBalance: receiverWallet.balance,
-  };
-};
-
-// Send money to another user
-export const transferMoney = async ({
-  senderPhone,
-  receiverPhone,
-  amount,
-}: {
-  senderPhone: string;
-  receiverPhone: string;
-  amount: number;
-}) => {
-  if (senderPhone === receiverPhone) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Cannot transfer to yourself");
-  }
-
-  const sender = await User.findOne({ phone: senderPhone });
-  const receiver = await User.findOne({ phone: receiverPhone });
-
-  if (!sender) {
-    throw new AppError(httpStatus.NOT_FOUND, "Your number not found");
-  }
-
-  if (!receiver) {
-    throw new AppError(httpStatus.NOT_FOUND, "Receiver number not found");
-  }
-
-  if (receiver.role === "AGENT") {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Cannot send money to an agent number."
-    );
-  }
-
-  const senderWallet = await Wallet.findOne({ owner: sender._id });
-  const receiverWallet = await Wallet.findOne({ owner: receiver._id });
-
-  if (!senderWallet || !receiverWallet) {
-    throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
-  }
-
-  if (senderWallet.balance < amount) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
-  }
-
-  senderWallet.balance -= amount;
-  receiverWallet.balance += amount;
-
-  await senderWallet.save();
-  await receiverWallet.save();
-
-  await UserTransaction.create({
-    userId: sender._id,
-    type: "SEND-MONEY",
-    amount,
     reference: receiver.phone,
   });
 
