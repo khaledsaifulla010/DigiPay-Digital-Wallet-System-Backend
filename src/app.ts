@@ -3,9 +3,15 @@ import cors from "cors";
 import { router } from "./app/routes";
 import { globalErrorHandler } from "./app/errorHelpers/globalErrorHandler/globalErrorHandler";
 import NotFoundRoute from "./app/middlewares/NotFoundRoute";
-const app = express();
-app.use(express.json());
+import passport from "passport";
+import "./app/config/passport";
 
+
+
+const app = express();
+
+app.use(express.json());
+app.use(passport.initialize());
 app.use(cors());
 
 // API END POINTS

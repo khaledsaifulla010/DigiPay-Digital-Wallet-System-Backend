@@ -13,7 +13,7 @@ passport.use(
       try {
         const isUserExist = await User.findOne({ email });
         if (!isUserExist) {
-          return done("User doesnot Exist!");
+          return done("User does not Exist!");
         }
 
         const isPasswordMatch = await bcryptjs.compare(
