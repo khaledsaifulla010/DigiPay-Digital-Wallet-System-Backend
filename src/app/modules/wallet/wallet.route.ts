@@ -6,7 +6,8 @@ import { TransferValidationSchema } from "./transfer/transfer.validation";
 import { WalletControllers } from "./wallet.controller";
 import { CashInValidationSchema } from "./cashin/cashin.validation";
 import { checkAuth } from "../../middlewares/checkAuth";
-import { UserRole } from "../user/user.interface";
+import { ALL_ROLES, ROLES } from "../../constants/roles";
+
 
 const router = express.Router();
 
@@ -28,15 +29,23 @@ router.post(
 
 router.get(
   "/all-wallets",
-  checkAuth(UserRole.ADMIN),
+  checkAuth(ROLES.ADMIN), // only admins
   WalletControllers.getAllWallets
 );
 
-router.get("/:id", checkAuth(UserRole.ADMIN), WalletControllers.getWalletById);
-router.patch(
-  "/:id",
-  checkAuth(...Object.values(UserRole)),
-  WalletControllers.updateUserWallet
+
+
+router.get("/me", checkAuth(...ALL_ROLES), WalletControllers.getMyWallet);
+router.get(
+  "/:userId",
+  checkAuth(...ALL_ROLES),
+  WalletControllers.getWalletByUserId
 );
 
+
+router.patch(
+  "/:id",
+  checkAuth(...ALL_ROLES),
+  WalletControllers.updateUserWallet
+);
 export const WalletRoutes = router;

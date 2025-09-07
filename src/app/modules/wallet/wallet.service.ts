@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { JwtPayload } from "jsonwebtoken";
 import AppError from "../../errorHelpers/appError/AppError";
 import { AgentCommissionHistory } from "../transaction/agentCommissionHistory/agentCommissionHistory.model";
@@ -10,9 +11,42 @@ import httpStatus from "http-status-codes";
 import { IWallet } from "./wallet.interface";
 import { UserRole } from "../user/user.interface";
 import { Types } from "mongoose";
+import { generateTransactionId } from "../../utils/generateTransactionId";
+
+
+const round2 = (n: number) => Number(n.toFixed(2));
+
+const computeCashOutFees = (amount: number) => {
+  const totalFee = round2((amount * 20) / 1000);
+  const adminCommission = round2((amount * 15.5) / 1000);
+  const agentCommission = round2((amount * 4.5) / 1000);
+  return { totalFee, adminCommission, agentCommission };
+};
+
+
+const computeSendMoneyFees = (amount: number) => {
+  const adminCommission = round2((amount * 10) / 1000);
+  return { adminCommission };
+};
+
+
+const computeCashInCommission = (amount: number) => {
+  const agentCommission = round2((amount * 4) / 1000);
+  return { agentCommission };
+};
+
+
+const getAdminWallet = async () => {
+  const admin = await User.findOne({ role: UserRole.ADMIN });
+  if (!admin) throw new AppError(httpStatus.NOT_FOUND, "Admin user not found");
+  const adminWallet = await Wallet.findOne({ userId: admin._id });
+  if (!adminWallet)
+    throw new AppError(httpStatus.NOT_FOUND, "Admin wallet not found");
+  return { admin, adminWallet };
+};
 
 // USER ROLE //
-// Send money to another user
+// Send money to another user (fee: 10/1000 goes to admin)
 export const transferMoney = async ({
   senderPhone,
   receiverPhone,
@@ -25,71 +59,74 @@ export const transferMoney = async ({
   const sender = await User.findOne({ phone: senderPhone });
   const receiver = await User.findOne({ phone: receiverPhone });
 
-  if (!sender) {
+  if (!sender)
     throw new AppError(httpStatus.NOT_FOUND, "Your number not found");
-  }
-
-  if (!receiver) {
+  if (!receiver)
     throw new AppError(httpStatus.NOT_FOUND, "Receiver number not found");
-  }
 
-  if (receiver.role === "AGENT") {
+  if (receiver.role === "AGENT")
     throw new AppError(
       httpStatus.BAD_REQUEST,
       "Cannot send money to an agent number."
     );
-  }
-  if (receiver.role === "ADMIN") {
+  if (receiver.role === "ADMIN")
     throw new AppError(
       httpStatus.BAD_REQUEST,
       "Cannot send money to an admin number."
     );
-  }
-  if (sender.status === "BLOCKED") {
+  if (sender.status === "BLOCKED")
     throw new AppError(
       httpStatus.BAD_REQUEST,
       "Your Account is Blocked. Please Contact With Your Admin."
     );
-  }
 
   const senderWallet = await Wallet.findOne({ userId: sender._id });
   const receiverWallet = await Wallet.findOne({ userId: receiver._id });
-
-  if (!senderWallet || !receiverWallet) {
+  if (!senderWallet || !receiverWallet)
     throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
-  }
 
-  if (senderWallet.balance < amount) {
+  // --- Fees (Send Money) ---
+  const { adminCommission } = computeSendMoneyFees(amount);
+  const totalDebit = round2(amount + adminCommission);
+
+  if (senderWallet.balance < totalDebit)
     throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
-  }
 
-  if (senderWallet.userStatus === "BLOCKED") {
+  if (
+    senderWallet.userStatus === "BLOCKED" ||
+    senderWallet.walletStatus === "BLOCKED"
+  )
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      "Your Account is Blocked. Please Contact With Your Admin."
+      "Your Account/Wallet is Blocked. Please Contact With Your Admin."
     );
-  }
-  if (senderWallet.walletStatus === "BLOCKED") {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Your Wallet is Blocked. Please Contact With Your Admin."
-    );
-  }
 
-  senderWallet.balance -= amount;
-  receiverWallet.balance += amount;
+  // Credit Admin with adminCommission
+  const { adminWallet } = await getAdminWallet();
+
+  // Apply balances
+  senderWallet.balance = round2(senderWallet.balance - totalDebit);
+  receiverWallet.balance = round2(receiverWallet.balance + amount);
+  adminWallet.balance = round2(adminWallet.balance + adminCommission);
 
   await senderWallet.save();
   await receiverWallet.save();
+  await adminWallet.save();
+
+  const transactionId = generateTransactionId();
 
   await UserTransaction.create({
+    transactionId,
     userId: sender._id,
     userName: sender.name,
     type: "SEND-MONEY",
-    amount: amount,
+    amount,
     receiver_phone: receiver.phone,
   });
+
+  // NOTE: per request, add adminCommission only on AllTransactions
   await AllTransactions.create({
+    transactionId,
     senderId: sender._id,
     senderName: sender.name,
     senderRole: sender.role,
@@ -97,12 +134,14 @@ export const transferMoney = async ({
     receiverName: receiver.name,
     receiverRole: receiver.role,
     transactionType: "SEND-MONEY",
-    amount: amount,
+    amount,
+    adminCommission, 
     sender_phone: sender.phone,
     receiver_phone: receiver.phone,
   });
 
   return {
+    transactionId,
     name: sender.name,
     senderBalance: senderWallet.balance,
     receiverBalance: receiverWallet.balance,
@@ -126,83 +165,88 @@ export const withdrawBalance = async ({
   const sender = await User.findOne({ phone: senderPhone });
   const receiver = await User.findOne({ phone: receiverPhone });
 
-  if (!sender) {
+  if (!sender)
     throw new AppError(httpStatus.NOT_FOUND, "Your number not found");
-  }
-
-  if (!receiver) {
+  if (!receiver)
     throw new AppError(httpStatus.NOT_FOUND, "Agent number not found");
-  }
 
-  if (receiver.role === "USER") {
+  if (receiver.role === "USER")
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      "Cannot cashout money to an user number."
+      "Cannot cashout money to a user number."
     );
-  }
-  if (receiver.role === "ADMIN") {
+  if (receiver.role === "ADMIN")
     throw new AppError(
       httpStatus.BAD_REQUEST,
       "Cannot cashout money to an admin number."
     );
-  }
-  if (sender.status === "BLOCKED") {
+  if (sender.status === "BLOCKED")
     throw new AppError(
       httpStatus.BAD_REQUEST,
       "Your Account is Blocked. Please Contact With Your Admin."
     );
-  }
 
   const senderWallet = await Wallet.findOne({ userId: sender._id });
   const receiverWallet = await Wallet.findOne({ userId: receiver._id });
-
-  if (!senderWallet || !receiverWallet) {
+  if (!senderWallet || !receiverWallet)
     throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
-  }
 
-  if (senderWallet.balance < amount) {
+  if (
+    senderWallet.userStatus === "BLOCKED" ||
+    senderWallet.walletStatus === "BLOCKED"
+  )
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Account/Wallet is Blocked. Please Contact With Your Admin."
+    );
+
+  // --- Fees (Cash-Out) ---
+  const { totalFee, adminCommission, agentCommission } =
+    computeCashOutFees(amount);
+  const totalDebit = round2(amount + totalFee);
+
+  if (senderWallet.balance < totalDebit)
     throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
-  }
 
-  if (senderWallet.userStatus === "BLOCKED") {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Your Account is Blocked. Please Contact With Your Admin."
-    );
-  }
-  if (senderWallet.walletStatus === "BLOCKED") {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Your Wallet is Blocked. Please Contact With Your Admin."
-    );
-  }
-  senderWallet.balance -= amount;
-  receiverWallet.balance += amount;
+  const { adminWallet } = await getAdminWallet();
 
-  const commission = Number(((amount * 4) / 1000).toFixed(2));
-  senderWallet.balance -= commission;
-  receiverWallet.balance += commission;
+  // Apply balances
+  senderWallet.balance = round2(senderWallet.balance - totalDebit);
+  // Agent receives the withdrawal amount + their commission
+  receiverWallet.balance = round2(
+    receiverWallet.balance + amount + agentCommission
+  );
+  // Admin receives his commission
+  adminWallet.balance = round2(adminWallet.balance + adminCommission);
 
   await senderWallet.save();
   await receiverWallet.save();
+  await adminWallet.save();
+
+  const transactionId = generateTransactionId();
 
   await UserTransaction.create({
+    transactionId,
     userId: sender._id,
     userName: sender.name,
     type: "CASHOUT",
-    amount: amount,
+    amount,
     receiver_phone: receiver.phone,
   });
 
+  // log agent commission
   await AgentCommissionHistory.create({
+    transactionId,
     userId: receiver._id,
     type: "CASHOUT",
-    amount: amount,
-    commission: commission,
+    amount,
+    commission: agentCommission,
     reference: receiver.phone,
+    receiverPhone: sender.phone,
   });
 
   await AllTransactions.create({
+    transactionId,
     senderId: sender._id,
     senderName: sender.name,
     senderRole: sender.role,
@@ -210,12 +254,14 @@ export const withdrawBalance = async ({
     receiverName: receiver.name,
     receiverRole: receiver.role,
     transactionType: "CASHOUT",
-    amount: amount,
+    amount,
+    adminCommission,
     sender_phone: sender.phone,
     receiver_phone: receiver.phone,
   });
 
   return {
+    transactionId,
     senderBalance: senderWallet.balance,
     receiverBalance: receiverWallet.balance,
   };
@@ -236,85 +282,84 @@ export const cashInMoney = async ({
     throw new AppError(httpStatus.BAD_REQUEST, "Cannot cash in to yourself");
   }
 
-  const sender = await User.findOne({ phone: senderPhone });
-  const receiver = await User.findOne({ phone: receiverPhone });
+  const sender = await User.findOne({ phone: senderPhone }); // Agent
+  const receiver = await User.findOne({ phone: receiverPhone }); // User
 
-  if (!sender) {
+  if (!sender)
     throw new AppError(httpStatus.NOT_FOUND, "Your number not found");
-  }
-
-  if (!receiver) {
+  if (!receiver)
     throw new AppError(httpStatus.NOT_FOUND, "Receiver number not found");
-  }
 
-  if (receiver.role === "AGENT") {
+  if (receiver.role === "AGENT")
     throw new AppError(
       httpStatus.BAD_REQUEST,
       "Cannot cash in money to an agent number."
     );
-  }
-  if (receiver.role === "ADMIN") {
+  if (receiver.role === "ADMIN")
     throw new AppError(
       httpStatus.BAD_REQUEST,
       "Cannot cash in money to an admin number."
     );
-  }
-  if (sender.status === "BLOCKED") {
+  if (sender.status === "BLOCKED")
     throw new AppError(
       httpStatus.BAD_REQUEST,
       "Your Account is Blocked. Please Contact With Your Admin."
     );
-  }
 
-  const senderWallet = await Wallet.findOne({ userId: sender._id });
-  const receiverWallet = await Wallet.findOne({ userId: receiver._id });
-
-  if (!senderWallet || !receiverWallet) {
+  const senderWallet = await Wallet.findOne({ userId: sender._id }); // agent wallet
+  const receiverWallet = await Wallet.findOne({ userId: receiver._id }); // user wallet
+  if (!senderWallet || !receiverWallet)
     throw new AppError(httpStatus.NOT_FOUND, "Wallet not found");
-  }
 
-  if (senderWallet.balance < amount) {
+  if (
+    senderWallet.userStatus === "BLOCKED" ||
+    senderWallet.walletStatus === "BLOCKED"
+  )
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "Your Account/Wallet is Blocked. Please Contact With Your Admin."
+    );
+
+  // --- Commission (Cash-In) ---
+  const { agentCommission } = computeCashInCommission(amount);
+
+  if (senderWallet.balance < amount)
     throw new AppError(httpStatus.BAD_REQUEST, "Insufficient balance");
-  }
-  if (senderWallet.userStatus === "BLOCKED") {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Your Account is Blocked. Please Contact With Your Admin."
-    );
-  }
-  if (senderWallet.walletStatus === "BLOCKED") {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Your Wallet is Blocked. Please Contact With Your Admin."
-    );
-  }
 
-  senderWallet.balance -= amount;
-  receiverWallet.balance += amount;
+  // Move principal amount from agent to user
+  senderWallet.balance = round2(senderWallet.balance - amount);
+  receiverWallet.balance = round2(receiverWallet.balance + amount);
 
-  const commission = Number(((amount * 4) / 1000).toFixed(2));
-  senderWallet.balance += commission;
+  // Give agent commission bonus (admin gets nothing)
+  senderWallet.balance = round2(senderWallet.balance + agentCommission);
 
   await senderWallet.save();
   await receiverWallet.save();
 
+  const transactionId = generateTransactionId();
+
   await UserTransaction.create({
-    userId: sender._id,
-    userName: sender.name,
-    amount: amount,
+    transactionId,
+    userId: receiver._id,
+    userName: receiver.name,
+    amount,
     type: "CASH-IN",
-    reference: sender.phone,
+    receiver_phone: sender.phone,
   });
 
   await AgentCommissionHistory.create({
+    transactionId,
     userId: sender._id,
     type: "CASH-IN",
-    amount: amount,
-    commission: commission,
+    amount,
+    commission: agentCommission,
     reference: receiver.phone,
+    receiverPhone: receiver.phone,
   });
 
+  // NOTE: per request, add adminCommission only on AllTransactions (admin gets 0 here)
   await AllTransactions.create({
+    transactionId,
     senderId: sender._id,
     senderName: sender.name,
     senderRole: sender.role,
@@ -322,15 +367,17 @@ export const cashInMoney = async ({
     receiverName: receiver.name,
     receiverRole: receiver.role,
     transactionType: "CASH-IN",
-    amount: amount,
+    amount,
+    adminCommission: 0,
     sender_phone: sender.phone,
     receiver_phone: receiver.phone,
   });
 
   return {
+    transactionId,
     senderBalance: senderWallet.balance,
     receiverBalance: receiverWallet.balance,
-    commissionAmount: commission,
+    commissionAmount: agentCommission,
   };
 };
 
@@ -381,8 +428,14 @@ const updateUserWallet = async (
 };
 
 // Get A Wallet //
-export const getWalletById = async (id: string) => {
-  return Wallet.findById(id);
+export const getWalletByUserId = async (userId: string) => {
+  try {
+    return await Wallet.findOne({ userId }).select(
+      "balance userStatus walletStatus userId"
+    );
+  } catch (e) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid userId format.", "");
+  }
 };
 
 export const WalletServices = {
@@ -390,6 +443,6 @@ export const WalletServices = {
   transferMoney,
   cashInMoney,
   getAllWallets,
-  getWalletById,
+  getWalletByUserId,
   updateUserWallet,
 };

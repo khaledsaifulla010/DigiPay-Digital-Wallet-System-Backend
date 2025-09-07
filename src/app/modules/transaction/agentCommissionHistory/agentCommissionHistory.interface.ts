@@ -9,5 +9,7 @@ export interface IAgentCommissionHistory {
   amount: number;
   commission: number;
   reference?: string;
+  receiverPhone?: string;
+  transactionId: string;
   timestamp?: Date;
 }

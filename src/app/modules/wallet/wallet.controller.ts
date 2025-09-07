@@ -6,6 +6,9 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import AppError from "../../errorHelpers/appError/AppError";
 import { JwtPayload } from "jsonwebtoken";
+import { UserRole } from "../user/user.interface";
+import { Types } from "mongoose";
+import { ROLES } from "../../constants/roles";
 
 //  USER ROLE
 // Send money to another user
@@ -94,23 +97,43 @@ const getAllWallets = catchAsync(
 );
 
 // Get A Wallets
-const getWalletById = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const wallet = await WalletServices.getWalletById(req.params.id);
+export const getMyWallet = catchAsync(async (req, res) => {
+  const { userId } = req.user as JwtPayload;
+  const wallet = await WalletServices.getWalletByUserId(userId as string);
+  if (!wallet)
+    throw new AppError(httpStatus.NOT_FOUND, "Wallet not found.", "");
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "OK",
+    data: wallet,
+  });
+});
 
-    if (!wallet) {
-      throw new AppError(httpStatus.BAD_REQUEST, "Wallet Not Found!", "");
-    }
+export const getWalletByUserId = catchAsync(async (req, res) => {
+  const { userId } = req.params;
+  const auth = req.user as JwtPayload;
 
-    sendResponse(res, {
-      statusCode: httpStatus.CREATED,
-      success: true,
-      message: "Wallet Retrieve Sucessfully.",
-      data: wallet,
-    });
-  }
-);
+  if (!Types.ObjectId.isValid(userId))
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid userId.", "");
+  if (auth.role !== ROLES.ADMIN && auth.userId !== userId)
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "Not authorized to view this wallet.",
+      ""
+    );
 
+  const wallet = await WalletServices.getWalletByUserId(userId);
+  if (!wallet)
+    throw new AppError(httpStatus.NOT_FOUND, "Wallet not found.", "");
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "OK",
+    data: wallet,
+  });
+});
 // UPDATE A USER WALLET STATUS //
 const updateUserWallet = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -136,6 +159,7 @@ export const WalletControllers = {
   transferMoney,
   cashInMoney,
   getAllWallets,
-  getWalletById,
+  getMyWallet,
+  getWalletByUserId,
   updateUserWallet,
 };

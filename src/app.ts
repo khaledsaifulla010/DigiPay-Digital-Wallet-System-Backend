@@ -6,32 +6,30 @@ import NotFoundRoute from "./app/middlewares/NotFoundRoute";
 import passport from "passport";
 import "./app/config/passport";
 import cookieParser from "cookie-parser";
-import { envVars } from "./app/config/env";
 
 const app = express();
 app.use(express.json());
 app.use(passport.initialize());
 app.use(cookieParser());
-app.set("trust proxy", 1);
 app.use(express.urlencoded({ extended: true }));
+
 app.use(
   cors({
-    origin: envVars.FRONTEND_URL,
+    origin: [
+      "http://localhost:5173",
+      "https://digipay-digital-wallet-system-front.vercel.app",
+    ],
     credentials: true,
   })
 );
 
-// API END POINTS
 app.use("/api/v1", router);
 
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (_req: Request, res: Response) => {
   res.send("🏦 Welcome to DigiPay Digital Wallet System.");
 });
 
-//GLOBAL ERROR Handler
 app.use(globalErrorHandler);
-
-// NOT FOUND ROUTE //
 app.use(NotFoundRoute);
 
 export default app;

@@ -12,6 +12,8 @@ export interface IAllTransactionHistory {
   receiverRole: string;
   transactionType: TTransactionStatus;
   amount: number;
+  adminCommission: number;
+  transactionId: string;
   sender_phone: string;
   receiver_phone: string;
 }

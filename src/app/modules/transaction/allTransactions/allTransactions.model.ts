@@ -44,6 +44,14 @@ const AllTransactionHistorySchema = new Schema<IAllTransactionHistory>(
       type: Number,
       required: true,
     },
+    adminCommission: {
+      type: Number,
+      required: true,
+    },
+    transactionId: {
+      type: String,
+      required: true,
+    },
     sender_phone: {
       type: String,
       required: true,

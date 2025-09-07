@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { IUser, UserRole, UserStatus } from "./user.interface";
 import bcrypt from "bcryptjs";
 import { User } from "./user.model";
@@ -58,7 +60,17 @@ export const createUser = async (userData: IUser) => {
   return { user: userWithWallet };
 };
 
-// UPDATE A USER //
+// Get All User //
+export const getAllUsers = async () => {
+  return User.find().select("-password");
+};
+
+// Get A User //
+export const getUserById = async (id: string) => {
+  return User.findById(id).select("-password");
+};
+
+// UPDATE A USER STATUS //
 const changeAgentStatus = async (
   userId: string,
   status: UserStatus,
@@ -109,19 +121,68 @@ const changeAgentStatus = async (
   return agent;
 };
 
-// Get All User //
-export const getAllUsers = async () => {
-  return User.find().select("-password");
+// UPDATE A USER PROFILE //
+const updateMyProfile = async (
+  userId: string,
+  payload: Partial<Pick<IUser, "name" | "phone" | "password">>
+) => {
+  const user = await User.findById(userId);
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, "User not found", "");
+
+  const updateData: Partial<IUser> = {};
+  if (payload.name !== undefined) updateData.name = payload.name;
+  if (payload.phone !== undefined) updateData.phone = payload.phone;
+
+  if (payload.password) {
+    const hashed = await bcrypt.hash(
+      payload.password,
+      Number(envVars.BCRYPT_SALT_ROUND)
+    );
+    updateData.password = hashed;
+  }
+
+  if (
+    (payload as any).email ||
+    (payload as any).role ||
+    (payload as any).status
+  ) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      "You can only update name, phone, and password.",
+      ""
+    );
+  }
+
+  Object.assign(user, updateData);
+  await user.save();
+
+  if (payload.name !== undefined || payload.phone !== undefined) {
+    await Wallet.findOneAndUpdate(
+      { userId: new Types.ObjectId(userId) },
+      {
+        ...(payload.name !== undefined ? { userName: payload.name } : {}),
+        ...(payload.phone !== undefined ? { userPhone: payload.phone } : {}),
+      },
+      { new: true }
+    );
+  }
+
+  const { password, ...safeUser } = user.toObject();
+  return safeUser;
 };
 
-// Get A User //
-export const getUserById = async (id: string) => {
-  return User.findById(id).select("-password");
+// GET MY PROFILE //
+const getMyProfile = async (userId: string) => {
+  const user = await User.findById(userId).select("-password");
+  if (!user) throw new AppError(httpStatus.NOT_FOUND, "User not found", "");
+  return user;
 };
 
 export const UserServices = {
   createUser,
   getAllUsers,
-  changeAgentStatus,
   getUserById,
+  changeAgentStatus,
+  updateMyProfile,
+  getMyProfile,
 };

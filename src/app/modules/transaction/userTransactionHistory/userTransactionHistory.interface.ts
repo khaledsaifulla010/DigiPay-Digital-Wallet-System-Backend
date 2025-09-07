@@ -8,5 +8,6 @@ export interface IUserTransactionHistory {
   userId: Types.ObjectId | string;
   type: TTransactionStatus;
   amount: number;
+  transactionId: string;
   receiver_phone?: string;
 }

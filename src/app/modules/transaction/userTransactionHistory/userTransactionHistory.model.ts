@@ -22,6 +22,10 @@ const userTransactionHistorySchema = new Schema<IUserTransactionHistory>(
       type: Number,
       required: true,
     },
+    transactionId: {
+      type: String,
+      required: true,
+    },
     receiver_phone: {
       type: String,
     },

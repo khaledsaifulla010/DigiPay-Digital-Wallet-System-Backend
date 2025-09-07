@@ -7,6 +7,7 @@ import AppError from "../../errorHelpers/appError/AppError";
 import httpStatus from "http-status-codes";
 import { UserStatus } from "./user.interface";
 import { JwtPayload } from "jsonwebtoken";
+
 // CREATE A USER CONTROLLER
 const createUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -19,6 +20,7 @@ const createUser = catchAsync(
     });
   }
 );
+
 // GET ALL USER CONTROLLER
 const getAllUsers = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -49,6 +51,7 @@ const getUserById = catchAsync(
     });
   }
 );
+
 // CHANGE A USER STATUS CONTROLLER
 const changeAgentStatus = catchAsync(async (req: Request, res: Response) => {
   const { status } = req.body;
@@ -67,9 +70,37 @@ const changeAgentStatus = catchAsync(async (req: Request, res: Response) => {
     data: updatedAgent,
   });
 });
+
+// UPDATE A USER PROFILE CONTROLLER
+const updateMyProfile = catchAsync(async (req: Request, res: Response) => {
+  const updated = await UserServices.updateMyProfile(
+    (req.user as JwtPayload).userId,
+    req.body
+  );
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Profile updated successfully.",
+    data: updated,
+  });
+});
+
+// GET MY PROFILE CONTROLLER
+const getMyProfile = catchAsync(async (req: Request, res: Response) => {
+  const me = await UserServices.getMyProfile((req.user as JwtPayload).userId);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Profile retrieved successfully.",
+    data: me,
+  });
+});
+
 export const UserControllers = {
   createUser,
   getAllUsers,
   getUserById,
   changeAgentStatus,
+  updateMyProfile,
+  getMyProfile,
 };

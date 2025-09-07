@@ -1,19 +1,20 @@
 import express from "express";
 import { checkAuth } from "../../../middlewares/checkAuth";
-import { UserRole } from "../../user/user.interface";
+
 import { AllTransactionsControllers } from "./allTransactions.controller";
+import { ROLES } from "../../../constants/roles";
 
 const router = express.Router();
 
 router.get(
   "/all-transactions",
-  checkAuth(UserRole.ADMIN),
+  checkAuth(ROLES.ADMIN),
   AllTransactionsControllers.getAllTransactions
 );
 
 router.get(
   "/:id",
-  checkAuth(UserRole.ADMIN),
+  checkAuth(ROLES.ADMIN),
   AllTransactionsControllers.getATransactionsById
 );
 
